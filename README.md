@@ -41,6 +41,22 @@ Very useful stuff about programming
 * [DGraph](https://github.com/dgraph-io/dgraph)
 
 # Interview
+- Table of content
+    - [Trees](#trees)
+    - [Lists](#lists)
+    - [Hashmaps](#hashmaps)
+    - [Equals and hashCode](#equals-and-hashcode)
+    - [Gang of four design patters](#gang-of-four-design-patters)
+    - [Concurrency](#concurrency)
+    - [Immutable objects](#immutable-objects)
+    - [ACID](#acid)
+    - [CAP theorem](#cap-theorem)
+    - [Partitioning](#partitioning)
+    - [Garbage Collection Algorithms](#garbage-collection-algorithms)
+    - [Java memory structure](#java-memory-structure)
+    - [Java quick thread communication](#java-quick-thread-communication)
+    - [Design principles](#design-principles)
+- - -
 ## Trees
 Tree is a directed acyclic graph. There top node is called root, bottom nodes are called leaves.
 Binary search trees (BST) are the most commonly used kind of trees. A tree must be balanced in order to
@@ -157,6 +173,7 @@ functionality that may be performed upon the data that they hold.
 Another version can be found [here](http://geekswithblogs.net/subodhnpushpak/archive/2009/09/18/the-23-gang-of-four-design-patterns-.-revisited.aspx).
 
 ## Concurrency
+Very good tutorial on Java concurrency can be found [here](http://tutorials.jenkov.com/java-concurrency/non-blocking-algorithms.html)
 
 ### Volatile keyword
 Essentially, volatile is used to indicate that a variable's value will be modified by different threads.
@@ -192,6 +209,29 @@ variables with main memory.
 
 After Thread A exits a block synchronized on Object X, that Thread B when entering a block also synchronized on Object 
 X will see the data as it was visible to thread A when it exited the block.
+
+### Non-blocking or lock-free data structures for Java
+* [ConcurrentLinkedQueue](http://docs.oracle.com/javase/7/docs/api/java/util/concurrent/ConcurrentLinkedQueue.html) is wait-free according to the javadoc
+* [ConcurrentLinkedDeque](http://docs.oracle.com/javase/7/docs/api/java/util/concurrent/ConcurrentLinkedDeque.html) is lock-free according to the source
+* [ConcurrentSkipListMap](http://docs.oracle.com/javase/7/docs/api/java/util/concurrent/ConcurrentSkipListMap.html) is lock-free according to the source
+* [ConcurrentSkipListSet](http://docs.oracle.com/javase/7/docs/api/java/util/concurrent/ConcurrentSkipListSet.html) is based on the CSLMap and has the same guarantees
+* [ConcurrentHashMap](http://docs.oracle.com/javase/7/docs/api/java/util/concurrent/ConcurrentHashMap.html) while not fully lock free this should still be called out since it frequently out performs the CSLMap and the NBHMap
+* [Disruptor by LMAX-Exchange](http://lmax-exchange.github.com/disruptor/) is a framework with a wait-free ring buffer at its core
+
+### Double-checked locking
+A static field *must* be declared as volatile in order to make programs work. However, before Java 5 even volatile
+would not help. Today, this idiom should be replaced by `Initialization On Demand Holder`:
+```java
+private static class LazySomethingHolder {
+    public static Something something = new Something();
+}
+   
+public static Something getInstance() {
+    return LazySomethingHolder.something;
+}
+```
+This code is guaranteed to be correct because of the initialization guarantees for static fields; if a field is set in
+a static initializer, it is guaranteed to be made visible, correctly, to any thread that accesses that class.
 
 ## Immutable objects
 Immutable objects greatly simplify program, since they:
@@ -251,8 +291,8 @@ serializability), the effects of an incomplete transaction might not even be vis
 ### Durability
 The durability property ensures that once a transaction has been committed, it will remain so, even in the event of 
 power loss, crashes, or errors. In a relational database, for instance, once a group of SQL statements execute, the
- esults need to be stored permanently (even if the database crashes immediately thereafter). To defend against power 
- loss, transactions (or their effects) must be recorded in a non-volatile memory.
+results need to be stored permanently (even if the database crashes immediately thereafter). To defend against power 
+loss, transactions (or their effects) must be recorded in a non-volatile memory.
 
 ## CAP theorem
 also named Brewer's theorem after computer scientist Eric Brewer, states that it is impossible for a distributed data 
@@ -328,3 +368,57 @@ use a different algorithm. A good article can be found [here](http://www.fasterj
 ## Phaser
 Java 7 introduces a flexible thread synchronization mechanism called Phaser. If you need to wait for threads to arrive
 before you can continue or start another set of tasks, then Phaser is a good choice. [Code example](https://dzone.com/articles/java-7-understanding-phaser)
+
+# Java high performance data structures
+## Agrona
+[Agrona](https://github.com/real-logic/Agrona) provides a library of data structures and utility methods that are a 
+common need when building high-performance applications in Java. Many of these utilities are used in the Aeron efficient
+reliable UDP unicast, multicast, and IPC message transport and provides high-performance buffer implementations to 
+support the Simple Binary Encoding Message Codec.
+
+## JCTools
+[Java Concurrency Tools for the JVM](https://github.com/JCTools/JCTools). This project aims to offer some concurrent 
+data structures currently missing from the JDK:
+
+- SPSC/MPSC/SPMC/MPMC variations for concurrent queues:
+    - SPSC - Single Producer Single Consumer (Wait Free, bounded and unbounded)
+    - MPSC - Multi Producer Single Consumer (Lock less, bounded and unbounded)
+    - SPMC - Single Producer Multi Consumer (Lock less, bounded)
+    - MPMC - Multi Producer Multi Consumer (Lock less, bounded)
+    - SPSC/MPSC linked array queues offer a balance between performance, allocation and footprint
+
+- An expanded queue interface (MessagePassingQueue):
+    - relaxedOffer/Peek/Poll: trade off conflated guarantee on full/empty queue state with improved performance.
+    - drain/fill: batch read and write methods for increased throughput and reduced contention
+
+# Design principles
+## SOLID
+### S -> Single Responsibility Principle
+a class should have only a single responsibility (i.e. changes to only one part of the 
+software's specification should be able to affect the specification of the class).
+### O -> Open/closed principle
+software entities should be open for extension, but closed for modification; such an entity can allow its behaviour to 
+be extended without modifying its source code.
+### L -> Liskov substitution principle
+objects in a program should be replaceable with instances of their subtypes without altering the correctness of that program." See also design by contract.
+### I -> Interface segregation principle
+many client-specific interfaces are better than one general-purpose interface
+### D -> Dependency inversion principle
+one should depend upon abstractions, not concretions.
+
+## Three principles of Object-Oriented Programming
+### Polymorphism
+Polymorphism is a concept by which we can perform a single action by different ways. So polymorphism means many forms.
+One can have, for example, an `Animal` class with subtypes `Cat` and `Dog`. `Animal` class has `makeSound()` method
+which is implemented differently in each subclass (each animal makes a different sound). 
+
+### Encapsulation
+Encapsulation is process of hiding implementation of data from outside world so that it can't made any changes to the 
+data thus avoiding the disasters. This can be accomplished by making the data private because private data is accessible
+only inside a class not by the outside world.
+
+### Inheritance
+Inheritance is the reuse of an existing code. In Java, classes can be derived from other classes thereby inheriting 
+fields and methods of an existing class. A class that is derived from an existing class that is known as subclass 
+(also a derived class, extended class or child class). The class from which subclass is derived is known as 
+superclass (also a parent class).
