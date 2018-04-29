@@ -56,6 +56,7 @@ Very useful stuff about programming
     - [Java memory structure](#java-memory-structure)
     - [Java quick thread communication](#java-quick-thread-communication)
     - [Design principles](#design-principles)
+    - [Java memory model](#java-memory-model)
 - - -
 ## Trees
 Tree is a directed acyclic graph. There top node is called root, bottom nodes are called leaves.
@@ -222,12 +223,14 @@ X will see the data as it was visible to thread A when it exited the block.
 A static field *must* be declared as volatile in order to make programs work. However, before Java 5 even volatile
 would not help. Today, this idiom should be replaced by `Initialization On Demand Holder`:
 ```java
-private static class LazySomethingHolder {
-    public static Something something = new Something();
-}
-   
-public static Something getInstance() {
-    return LazySomethingHolder.something;
+public class InitializationOnDemandHolder {
+    private static class LazySomethingHolder {
+        public static Something something = new Something();
+    }
+       
+    public static Something getInstance() {
+        return LazySomethingHolder.something;
+    }
 }
 ```
 This code is guaranteed to be correct because of the initialization guarantees for static fields; if a field is set in
@@ -422,3 +425,31 @@ Inheritance is the reuse of an existing code. In Java, classes can be derived fr
 fields and methods of an existing class. A class that is derived from an existing class that is known as subclass 
 (also a derived class, extended class or child class). The class from which subclass is derived is known as 
 superclass (also a parent class).
+
+# Java Memory Model
+## Happens-before
+`Happens-before` defines a partial ordering on all actions within the program. To guarantee that the thread executing
+action Y can see the results of action X (whether or not X and Y occur in different threads), there must be a 
+`happens-before` relationship between X and Y. In the absence of a happens-before ordering between two operations, the
+JVM is free to reorder them as it wants (JIT compiler optimization).
+`Happens-before` is not just reordering of actions in 'time' but also a guarantee of ordering of read and write to
+memory. Two threads performing write and read to memory can be consistent to each other actions in terms of clock time
+but might not see each others changes consistently (Memory Consistency Errors) unless they have `happens-before`
+relationship.
+[source](https://www.logicbig.com/tutorials/core-java-tutorial/java-multi-threading/happens-before.html)
+[source2](https://www.cs.umd.edu/~pugh/java/memoryModel/jsr-133-faq.html)
+
+The following rules form `happens-before` relationship:
+- **Single thread rule:** Each action in a single thread happens-before every action in that thread that comes later 
+in the program order.  
+- **Monitor lock rule:** An unlock on a monitor lock (exiting synchronized method/block) happens-before every subsequent
+acquiring on the same monitor lock.
+- **Volatile variable rule:** A write to a volatile field happens-before every subsequent read of that same field.
+Writes and reads of volatile fields have similar memory consistency effects as entering and exiting monitors
+(synchronized block around reads and writes), but without actually acquiring monitors/locks.
+- **Thread join rule:** All actions in a thread happen-before any other thread successfully returns from a join on that
+thread. Say thread A spawns a new thread B by calling threadA.start() then calls threadA.join(). Thread A will wait at
+join() call until thread B's run method finishes. After join method returns, all subsequent actions in thread A will see
+all actions performed in thread B's run method happened before them. 
+- **Transitivity:** If A `happens-before` B, and B `happens-before` C, then A `happens-before` C.
+
