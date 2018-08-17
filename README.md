@@ -453,3 +453,6 @@ join() call until thread B's run method finishes. After join method returns, all
 all actions performed in thread B's run method happened before them. 
 - **Transitivity:** If A `happens-before` B, and B `happens-before` C, then A `happens-before` C.
 
+# Algorithms
+## Suffix tree
+[source](https://www.geeksforgeeks.org/pattern-searching-set-8-suffix-tree-introduction/)
